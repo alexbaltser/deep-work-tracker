@@ -119,6 +119,29 @@ app.get('/api/sessions', async (req, res) => {
   }
 });
 
+// Update a session
+app.put('/api/sessions/:id', async (req, res) => {
+  const { id } = req.params;
+  const { start_time, end_time, note } = req.body;
+
+  try {
+    const start = new Date(start_time);
+    const end = new Date(end_time);
+    const duration = Math.floor((end - start) / 1000); // seconds
+
+    const { error } = await supabase
+      .from('sessions')
+      .update({ start_time, end_time, duration, note })
+      .eq('id', id);
+
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Error updating session:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Delete a session
 app.delete('/api/sessions/:id', async (req, res) => {
   const { id } = req.params;

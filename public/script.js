@@ -8,13 +8,32 @@ const logsDiv = document.getElementById('logs');
 const liveTimer = document.getElementById('liveTimer');
 const timerStatus = document.getElementById('timerStatus');
 
+// Edit Modal Elements
+const editModal = document.getElementById('editModal');
+const editForm = document.getElementById('editForm');
+const cancelEditBtn = document.getElementById('cancelEditBtn');
+const closeModalSpan = document.querySelector('.close-modal');
+
 let isRunning = false;
 let currentSessionStartTime = null;
 let timerInterval = null;
+let allSessions = []; // Store sessions to access them for editing
 
 // Initial load
 fetchStatus();
 fetchSessions();
+
+// Edit Modal Listeners
+cancelEditBtn.addEventListener('click', closeEditModal);
+closeModalSpan.addEventListener('click', closeEditModal);
+window.addEventListener('click', (e) => {
+  if (e.target === editModal) closeEditModal();
+});
+
+editForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  await saveEdit();
+});
 
 startBtn.addEventListener('click', async () => {
   const note = noteInput.value;
@@ -139,6 +158,7 @@ function updateTimerDisplay() {
 async function fetchSessions() {
   const res = await fetch('/api/sessions');
   const sessions = await res.json();
+  allSessions = sessions; // Store for access
   renderLogs(sessions);
   renderHeatmap(sessions);
 }
@@ -165,7 +185,10 @@ function renderLogs(sessions) {
              <strong>You</strong> completed ${durationText} of deep work.
              <span class="log-time-ago">${timeAgoText}</span>
            </div>
-           <button class="delete-btn" onclick="deleteSession(${session.id})" title="Delete session">×</button>
+           <div>
+             <button class="edit-btn" onclick="openEditModalById(${session.id})" title="Edit session">✎</button>
+             <button class="delete-btn" onclick="deleteSession(${session.id})" title="Delete session">×</button>
+           </div>
         </div>
         ${noteHtml}
       </div>
@@ -180,6 +203,65 @@ async function deleteSession(id) {
   const res = await fetch(`/api/sessions/${id}`, { method: 'DELETE' });
   if (res.ok) {
     fetchSessions();
+  }
+}
+
+// Edit Functions
+function closeEditModal() {
+  editModal.classList.remove('show');
+}
+
+function openEditModalById(id) {
+  const session = allSessions.find(s => s.id === id);
+  if (!session) return;
+
+  document.getElementById('editId').value = session.id;
+  document.getElementById('editNote').value = session.note || '';
+
+  // Convert UTC strings to local datetime-local format (YYYY-MM-DDTHH:mm)
+  document.getElementById('editStartTime').value = toLocalISOString(session.start_time);
+  
+  // If session is running (no end_time), use current time for editing end time? 
+  // Or maybe prevent editing running sessions? 
+  // Let's assume we edit past sessions mostly. If end_time is null, use current time.
+  document.getElementById('editEndTime').value = toLocalISOString(session.end_time || new Date().toISOString());
+
+  editModal.classList.add('show');
+}
+
+function toLocalISOString(dateStr) {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  const offset = date.getTimezoneOffset() * 60000;
+  const localISOTime = (new Date(date - offset)).toISOString().slice(0, 16);
+  return localISOTime;
+}
+
+async function saveEdit() {
+  const id = document.getElementById('editId').value;
+  // datetime-local gives "YYYY-MM-DDTHH:mm", which IS valid ISO format start for Date constructor in most browsers,
+  // but to be safe and clear about timezones, new Date(value) works.
+  // We want to send back an ISO string.
+  const start_time = new Date(document.getElementById('editStartTime').value).toISOString();
+  const end_time = new Date(document.getElementById('editEndTime').value).toISOString();
+  const note = document.getElementById('editNote').value;
+
+  try {
+    const res = await fetch(`/api/sessions/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ start_time, end_time, note })
+    });
+
+    if (res.ok) {
+      closeEditModal();
+      fetchSessions();
+    } else {
+      alert('Failed to update session');
+    }
+  } catch (err) {
+    console.error(err);
+    alert('Error updating session');
   }
 }
 
