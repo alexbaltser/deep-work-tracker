@@ -141,9 +141,13 @@ textarea:focus {
   font-weight: 500;
   cursor: pointer;
   color: white;
-  transition: .2s;
+  transition: none;
   flex: 1;
   text-align: center;
+}
+
+.btn:active {
+  transform: scale(0.96) translateY(1px);
 }
 
 .btn:disabled {
