@@ -18,47 +18,78 @@ fetchSessions();
 
 startBtn.addEventListener('click', async () => {
   const note = noteInput.value;
-  const res = await fetch('/api/start', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ note })
-  });
-  if (res.ok) {
-    fetchStatus();
+  
+  // Optimistic UI update
+  setRunningState(true, new Date(), note);
+
+  try {
+    const res = await fetch('/api/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ note })
+    });
+    
+    if (!res.ok) {
+      throw new Error('Failed to start');
+    }
+    // We can fetchStatus() here to be sure, but we are already running
+  } catch (err) {
+    console.error(err);
+    alert('Could not start session. Please try again.');
+    setRunningState(false);
   }
 });
 
 stopBtn.addEventListener('click', async () => {
-  const res = await fetch('/api/stop', { method: 'POST' });
-  if (res.ok) {
+  // Optimistic UI update
+  setRunningState(false);
+
+  try {
+    const res = await fetch('/api/stop', { method: 'POST' });
+    if (res.ok) {
+      fetchSessions(); // Update history
+    } else {
+       throw new Error('Failed to stop');
+    }
+  } catch (err) {
+    console.error(err);
+    alert('Could not stop session. Please refresh.');
+    // In case of stop failure, we might want to re-fetch status to see true state
     fetchStatus();
-    fetchSessions(); // Update history immediately
   }
 });
 
 async function fetchStatus() {
-  const res = await fetch('/api/status');
-  const data = await res.json();
-  
-  if (data.running) {
-    isRunning = true;
-    currentSessionStartTime = new Date(data.session.start_time);
+  try {
+    const res = await fetch('/api/status');
+    const data = await res.json();
     
+    if (data.running) {
+       setRunningState(true, new Date(data.session.start_time), data.session.note);
+    } else {
+       setRunningState(false);
+    }
+  } catch (err) {
+    console.error('Error fetching status', err);
+  }
+}
+
+function setRunningState(running, startTime = null, note = '') {
+  isRunning = running;
+  if (running) {
+    currentSessionStartTime = startTime || new Date();
     startBtn.disabled = true;
     stopBtn.disabled = false;
-    noteInput.value = data.session.note || '';
+    noteInput.value = note || '';
     noteInput.disabled = true;
     
     const startTimeStr = currentSessionStartTime.toLocaleString('ru-RU');
     statusDiv.innerHTML = `🏁 Started: <strong>${startTimeStr}</strong>`;
     
-    // Start Live Timer
     timerStatus.textContent = 'Running...';
     timerStatus.classList.add('running');
     startTimerInterval();
-    
   } else {
-    isRunning = false;
     currentSessionStartTime = null;
     stopTimerInterval();
     
@@ -68,7 +99,6 @@ async function fetchStatus() {
     noteInput.value = '';
     statusDiv.textContent = '⏸ Timer stopped';
     
-    // Reset Timer Display
     liveTimer.textContent = '00:00:00';
     timerStatus.textContent = 'Not running';
     timerStatus.classList.remove('running');
@@ -127,14 +157,8 @@ function renderLogs(sessions) {
       ? `<div class="log-note-bubble">📝 ${session.note}</div>` 
       : '';
 
-    // Random avatar color based on ID (just for fun/visuals if no user auth)
-    // Or just a standard placeholder
-    const avatarUrl = "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png";
-
     el.innerHTML = `
-      <div class="log-avatar">
-        <img src="${avatarUrl}" alt="User">
-      </div>
+      <div class="log-marker"></div>
       <div class="log-content">
         <div class="log-header-row">
            <div class="log-text">
