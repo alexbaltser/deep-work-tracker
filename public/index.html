@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Deep Work Tracker</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Deep Work Start/Stop</h1>
+    
+    <div class="left-column">
+      <div class="timer-card">
+        <div class="timer-header">
+          <h2>Timer</h2>
+          <p>Track focused deep work blocks.</p>
+        </div>
+        <div id="liveTimer" class="timer-display">00:00:00</div>
+        <div id="timerStatus" class="timer-status">Not running</div>
+      </div>
+
+      <div class="controls">
+        <label for="note">Заметка (опционально)</label>
+        <textarea id="note" placeholder="Deep Work"></textarea>
+        
+        <div class="buttons">
+          <button id="startBtn" class="btn start">СТАРТ</button>
+          <button id="stopBtn" class="btn stop" disabled>СТОП</button>
+        </div>
+
+        <div id="status" class="status-bar">
+          <!-- Status text will go here -->
+        </div>
+      </div>
+    </div>
+
+    <div class="right-column">
+      <div class="heatmap-card">
+        <h2>Your Deep Work</h2>
+        <div class="heatmap-container">
+          <div class="heatmap-days">
+            <span></span>
+            <span>Mon</span>
+            <span></span>
+            <span>Wed</span>
+            <span></span>
+            <span>Fri</span>
+            <span></span>
+          </div>
+          <div class="heatmap-content">
+            <div id="heatmap-months" class="heatmap-months"></div>
+            <div id="heatmap" class="heatmap-grid"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="logs-section">
+        <h2>Your Activity</h2>
+        <div id="logs" class="activity-timeline"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
